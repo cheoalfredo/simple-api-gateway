@@ -1,0 +1,14 @@
+{
+  "Routes": [
+    {
+      "BasePath": "/jsonp",
+      "Upstream": "https://jsonplaceholder.typicode.com/",
+      "Methods": "*"
+    },
+    {
+      "BasePath": "/httpbin",
+      "Upstream": "https://httpbin.org/",
+      "Methods": "*"
+    }
+  ]
+}
