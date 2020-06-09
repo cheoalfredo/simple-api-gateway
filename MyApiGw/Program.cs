@@ -11,31 +11,49 @@ using System.Net;
 using System.Collections.Generic;
 using MyApiGw.Models;
 using MyApiGw.Middleware;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 
 public class Program
 {
-    
 
-    public static void Main(string[] args) =>
-        Host.CreateDefaultBuilder(args)
+
+    public static void Main(string[] args)
+    {
+
+        ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+        Host.CreateDefaultBuilder(args)           
         .ConfigureServices((hostBuilder, services) =>
-        {            
+        {
             services.AddHttpClient();
             var JsonConfig = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
                        .AddJsonFile("appgwcfg.json", false)
-                       .AddJsonFile("routes.json", true).Build();      
-                
-            services.AddSingleton<IConfiguration>(icfg => JsonConfig);
-        })
-        .ConfigureWebHostDefaults(webBuilder =>
-        {                   
+                       .AddJsonFile("routes.json", true).Build();
 
+            services.AddSingleton<IConfiguration>(icfg => JsonConfig);
+        })        
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+
+            webBuilder.ConfigureKestrel(opts =>
+            {
+                opts.ConfigureHttpsDefaults(opt =>
+                {
+                    opt.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
+                    opt.CheckCertificateRevocation = false;
+                    opt.AllowAnyClientCertificate();
+                    /*opt.ClientCertificateValidation = (a, b, c) =>
+                    {
+                        return true;
+                    };*/
+                });
+            });
             webBuilder.Configure(app =>
             {
+
                 var iConfig = app.ApplicationServices.GetService<IConfiguration>();
                 app.UseRouting();
-
                 app
+                .UseMiddleware<MutualTLSMiddleware>()
                 .UseMiddleware<BWListMiddleware>()
                 .UseMiddleware<ApiGatewayMiddleware>();
                 app.UseEndpoints(route =>
@@ -49,4 +67,5 @@ public class Program
             });
         })
         .Build().Run();
+    }
 }

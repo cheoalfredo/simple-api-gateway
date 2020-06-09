@@ -4,6 +4,7 @@
     {
         private string _upstream;
         public string BasePath { get; set; }
+        public string SSLCert { get; set; }
         public string Upstream
         {
             get { return _upstream; }

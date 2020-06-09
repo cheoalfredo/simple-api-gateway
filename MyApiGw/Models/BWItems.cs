@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace MyApiGw.Models
 {
 
-    public enum ListType { ByDefaultAllDenied, ByDefaultAllAllowed }
+    public enum BLBehavior { ByDefaultAllDenied, ByDefaultAllAllowed }
     public class BWItems
-    {
-        public IEnumerable<string> SourceIps { get; set; }
-        public ListType AllowedOrDenied { get; set; }
+    {        
+        public IEnumerable<string> SourceIps { get; set; }        
+        public BLBehavior AllowedOrDenied { get; set; }
     }
 }

@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.IIS.Core;
 using Microsoft.Extensions.Configuration;
 using MyApiGw.Models;
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
-using System.Linq;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,18 +28,24 @@ namespace MyApiGw.Middleware
 
 
         public async Task InvokeAsync(HttpContext context)
-        {            
-
-            if (_blItems.SourceIps.Contains(context.Connection.RemoteIpAddress.ToString()) && 
-                _blItems.AllowedOrDenied.Equals(ListType.ByDefaultAllAllowed))
+        {
+           
+            if (_blItems.SourceIps != null)
             {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                byte[] byteArray = Encoding.UTF8.GetBytes("Your request has been denied, maybe on black list ?");
-                MemoryStream stream = new MemoryStream(byteArray);
-                await stream.CopyToAsync(context.Response.Body);             
-                return;
+                var remoteIp = context.Connection.RemoteIpAddress.ToString();
+                if ((_blItems.SourceIps.Contains(remoteIp) && _blItems.AllowedOrDenied.Equals(BLBehavior.ByDefaultAllAllowed)) ||                  
+                 (!_blItems.SourceIps.Contains(remoteIp) && _blItems.AllowedOrDenied.Equals(BLBehavior.ByDefaultAllDenied)))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    byte[] byteArray = Encoding.UTF8.GetBytes("Your request has been denied, maybe on black list ?");
+                    MemoryStream stream = new MemoryStream(byteArray);
+                    await stream.CopyToAsync(context.Response.Body);
+                    return;
+                }
+              
             }
 
+           
             await _next(context);
         }
     }

@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+
+package coprocess;
+
+message ReturnOverrides {
+  int32 response_code = 1;
+  string response_error = 2;
+  map<string, string> headers = 3;
+  bool override_error = 4;
+  string response_body = 5;
+}
+
+enum HookType {
+  Unknown = 0;
+  Pre = 1;
+	Post = 2;
+	PostKeyAuth = 3;
+	CustomKeyCheck  = 4;
+  Response = 5;
+}
+
+message StringSlice {
+  repeated string items = 1;
+}
+
+
+
+message MiniRequestObject {
+  map<string, string> headers = 1;
+  map<string, string> set_headers = 2;
+  repeated string delete_headers = 3;
+  string body = 4;
+  string url = 5;
+  map<string, string> params = 6;
+  map<string, string> add_params = 7;
+  map<string, string> extended_params = 8;
+  repeated string delete_params = 9;
+  ReturnOverrides return_overrides = 10;
+  string method = 11;
+  string request_uri = 12;
+  string scheme = 13;
+  bytes raw_body = 14;
+}
+
+message Object {
+  HookType hook_type = 1;
+  string hook_name = 2;
+  MiniRequestObject request = 3;
+  SessionState session = 4;
+  map<string, string> metadata = 5;
+  map<string, string> spec = 6;
+  ResponseObject response = 7;
+}
+
+message Event {
+  string payload = 1;
+}
+
+message EventReply {}
+
+service Dispatcher {
+  rpc Dispatch (Object) returns (Object) {}
+  rpc DispatchEvent (Event) returns (EventReply) {}
+}
+
+
+message ResponseObject {
+  int32 status_code = 1;
+  bytes raw_body = 2;
+  string body = 3;
+  map<string, string> headers = 4;
+}
+
+message AccessSpec {
+  string url = 1;
+  repeated string methods = 2;
+}
+
+message AccessDefinition {
+  string api_name = 1;
+  string api_id = 2;
+  repeated string versions = 3;
+  repeated AccessSpec allowed_urls = 4;
+}
+
+message BasicAuthData {
+  string password = 1;
+  string hash = 2;
+}
+
+message JWTData {
+  string secret = 1;
+}
+
+message Monitor {
+  repeated double trigger_limits = 1;
+}
+
+message SessionState {
+  int64 last_check = 1;
+
+  double allowance = 2;
+  double rate = 3;
+  double per = 4;
+
+  int64 expires = 5;
+  int64 quota_max = 6;
+  int64 quota_renews = 7;
+  int64 quota_remaining = 8;
+  int64 quota_renewal_rate = 9;
+
+  map<string, AccessDefinition> access_rights = 10;
+
+  string org_id = 11;
+  string oauth_client_id = 12;
+  map<string, string> oauth_keys = 13;
+
+  BasicAuthData basic_auth_data = 14;
+
+  JWTData jwt_data = 15;
+
+  bool hmac_enabled = 16;
+  string hmac_secret = 17;
+  bool is_inactive = 18;
+  string apply_policy_id = 19;
+  int64 data_expires = 20;
+
+  Monitor monitor = 21;
+
+  bool enable_detailed_recording = 22;
+
+  map<string, string> metadata = 23;
+
+  repeated string tags = 24;
+  string alias = 25;
+  string last_updated = 26;
+
+  int64 id_extractor_deadline = 27;
+  int64 session_lifetime = 28;
+  repeated string apply_policies = 29;
+
+  string certificate = 30;
+}
