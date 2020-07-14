@@ -4,6 +4,7 @@ using MyApiGw.Extensions;
 using MyApiGw.Models;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -18,21 +19,22 @@ namespace MyApiGw.Middleware
         private readonly RequestDelegate _next;
         private readonly IConfiguration _config;
         private readonly IEnumerable<GwEndpoint> _endpoints = new List<GwEndpoint>();
+        
         public ApiGatewayMiddleware(RequestDelegate nextMiddleware, IConfiguration config)
         {
             _next = nextMiddleware;
             _config = config;
             _config.Bind("Routes", _endpoints);
+            
         }
+      
 
 
-        public async Task InvokeAsync(HttpContext context, IHttpClientFactory upstream, IEnumerable<Endpoint> endpoints)
+        public async Task InvokeAsync(HttpContext context, IHttpClientFactory upstream)
         {
             var (destinationUrl, basePath) = GetUpstreamServiceUri(context.Request);
-
             if (destinationUrl != null)
             {
-
                 var remote = new HttpRequestMessage();
                 remote.RequestUri = destinationUrl;
                 remote.Headers.Host = destinationUrl.Host;
@@ -40,11 +42,10 @@ namespace MyApiGw.Middleware
                 var startTime = DateTime.Now;
                 using var responseMessage = await upstream.CreateClient().SendAsync(remote, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
                 context.Response.StatusCode = (int)responseMessage.StatusCode;
-                CopyHeaders(context, responseMessage, DateTime.Now.Subtract(startTime));
+                CopyHeaders(context, responseMessage, DateTime.Now.Subtract(startTime));                
                 await responseMessage.Content.CopyToAsync(context.Response.Body);
                 return;
             }
-
             await _next(context);
         }
 
@@ -64,7 +65,8 @@ namespace MyApiGw.Middleware
 
         private void CopyHeaders(HttpContext context, HttpResponseMessage responseMessage, TimeSpan duration)
         {
-            foreach (var header in responseMessage.Headers)
+            var connHeaders = responseMessage.Headers.Where(k => k.Key.Contains("connection", StringComparison.OrdinalIgnoreCase));
+            foreach (var header in responseMessage.Headers.Except(connHeaders))
             {
                 context.Response.Headers[header.Key] = header.Value.ToArray();
             }
@@ -75,8 +77,10 @@ namespace MyApiGw.Middleware
             {
                 context.Response.Headers[header.Key] = header.Value.ToArray();
             }
-            context.Response.Headers.Remove("transfer-encoding");
+            _config.GetValue<string>("removeHeaders").Split(",").ToList().ForEach(x => context.Response.Headers.Remove(x.Trim()));
         }
+
+        
     }
 
 

@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace azb2c.Controllers
+namespace keyvault_podid.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -24,27 +23,17 @@ namespace azb2c.Controllers
             _logger = logger;
         }
 
-        [Authorize]
-        [HttpGet("base")]
-        public Dictionary<string, string> GetBase()
-        {
-            var d = new Dictionary<string, string>();
-            var claims = User.Claims;
-            foreach(var c in claims)
-            {
-                d.Add(c.Type, c.Value);
-            }
-
-            return d;
-            
-        }
-
         [HttpGet]
-        public IEnumerable<string> Get()
+        public IEnumerable<WeatherForecast> Get()
         {
-            
-            return Summaries;
-
+            var rng = new Random();
+            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            {
+                Date = DateTime.Now.AddDays(index),
+                TemperatureC = rng.Next(-20, 55),
+                Summary = Summaries[rng.Next(Summaries.Length)]
+            })
+            .ToArray();
         }
     }
 }

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using MyApiGw.Models;
 using MyApiGw.Middleware;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 public class Program
 {
@@ -30,40 +31,50 @@ public class Program
                        .AddJsonFile("routes.json", true).Build();
 
             services.AddSingleton<IConfiguration>(icfg => JsonConfig);
+            services.AddSingleton(typeof(CustomHeaderLoader));
         })        
         .ConfigureWebHostDefaults(webBuilder =>
         {
 
             webBuilder.ConfigureKestrel(opts =>
             {
+
+                
+
                 opts.ConfigureHttpsDefaults(opt =>
-                {
-                    opt.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
+                {                    
+                    opt.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
                     opt.CheckCertificateRevocation = false;
                     opt.AllowAnyClientCertificate();
-                    /*opt.ClientCertificateValidation = (a, b, c) =>
+                    
+                    opt.ClientCertificateValidation = (a, b, c) =>
                     {
                         return true;
-                    };*/
-                });
+                    };
+
+                   
+                });                
             });
             webBuilder.Configure(app =>
             {
 
                 var iConfig = app.ApplicationServices.GetService<IConfiguration>();
                 app.UseRouting();
-                app
-                .UseMiddleware<MutualTLSMiddleware>()
-                .UseMiddleware<BWListMiddleware>()
-                .UseMiddleware<ApiGatewayMiddleware>();
-                app.UseEndpoints(route =>
+                app.UseMiddleware<HeaderProcessingMiddleware>()
+                   .UseMiddleware<MutualTLSMiddleware>()
+                   .UseMiddleware<BWListMiddleware>()
+                   .UseMiddleware<ApiGatewayMiddleware>()                  
+                   .UseMiddleware<Klz404Middleware>();                
+
+
+                /*app.UseEndpoints(route =>
                 {
                     route.MapGet("/", context =>
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return context.Response.WriteAsync(string.Format(iConfig.GetValue<string>("404Body"), iConfig.GetValue<string>("404Logo").Replace(@"\", "")));
                     });
-                });
+                });*/
             });
         })
         .Build().Run();
